@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; connect-src https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; style-src 'self' https://accounts.google.com/gsi/style; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Jahresplan Apotheke</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Jahresplan</h1>
+    <div class="yearnav">
+      <button id="prevYear" type="button" aria-label="Vorheriges Jahr">‹</button>
+      <span id="yearLabel"></span>
+      <button id="nextYear" type="button" aria-label="Nächstes Jahr">›</button>
+    </div>
+    <span id="status" class="status"></span>
+    <span class="spacer"></span>
+    <button id="signIn" type="button">Mit Google anmelden</button>
+    <button id="signOut" type="button" hidden>Abmelden</button>
+    <button id="print" type="button">Drucken / PDF</button>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <section>
+        <h2>Kalender</h2>
+        <p id="calHint" class="hint">Anmelden, um die Google-Kalender zu laden.</p>
+        <ul id="calList" class="callist"></ul>
+      </section>
+      <section>
+        <h2>Eingebaut</h2>
+        <ul class="callist">
+          <li><label><input type="checkbox" id="showHolidays"> <span class="swatch holiday"></span> Feiertage (Brandenburg)</label></li>
+          <li><label><input type="checkbox" id="showSchool"> <span class="swatch school"></span> Schulferien Brandenburg</label></li>
+        </ul>
+      </section>
+      <section class="hint">
+        <p><b>Anzeige pro Kalender</b><br>
+        Kürzel: Titel steht im Tag (z.&nbsp;B. „Mi Kr“).<br>
+        Balken: farbiger Balken über die Tage.<br>
+        Rahmen: Titel eingerahmt am Datum (z.&nbsp;B. Notdienst).</p>
+      </section>
+    </aside>
+
+    <main>
+      <div id="legend" class="legend"></div>
+      <table class="year">
+        <colgroup><col class="c-month"><col class="c-kw"><col></colgroup>
+        <thead>
+          <tr>
+            <th id="yearHead" class="yearhead"></th>
+            <th>KW</th>
+            <th class="days-head">
+              <div class="dgrid"><span>Montag</span><span>Dienstag</span><span>Mittwoch</span><span>Donnerstag</span><span>Freitag</span><span>Samstag</span><span>Sonntag</span></div>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="weeks"></tbody>
+      </table>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="holidays.js"></script>
+  <script src="app.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>
