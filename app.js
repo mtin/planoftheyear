@@ -190,12 +190,14 @@
       first = parseYmd(e.start.date);
       last = addDays(parseYmd(e.end.date), -1);
     } else {
-      const s = new Date(e.start.dateTime), en = new Date(new Date(e.end.dateTime).getTime() - 1);
+      // For framed calendars (night shifts) a shift ending the next morning belongs only to the
+      // day it starts, so ignore the last 12 hours; otherwise ignore just the final millisecond.
+      const trim = modeOf(cal) === "frame" ? 12 * 3600000 : 1;
+      const s = new Date(e.start.dateTime), en = new Date(new Date(e.end.dateTime).getTime() - trim);
       first = new Date(s.getFullYear(), s.getMonth(), s.getDate());
       last = new Date(en.getFullYear(), en.getMonth(), en.getDate());
       if (last < first) last = first;
     }
-    if (modeOf(cal) === "frame") last = first; // a night shift belongs to the day it starts
     return {
       title: (e.summary || "").trim(),
       color: (e.colorId && state.eventColors[e.colorId]) || cal.backgroundColor,
