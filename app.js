@@ -8,7 +8,18 @@
   const SETTINGS_KEY = "jahresplan.settings.v1";
   const TOKEN_KEY = "jahresplan.token";
   const MONTHS = ["Jan", "Feb", "Mrz", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
-  const MODES = { initials: "Kürzel", bar: "Balken", frame: "Rahmen" };
+  // Display modes per calendar.
+  //  initials:   title written into every day (holiday initials)
+  //  bar-day / frame-day:   one bar / frame per day, title on every day
+  //  bar-span / frame-span: one bar / frame from the exact start to the exact end time
+  const MODES = {
+    "initials": "Kürzel",
+    "bar-day": "Balken täglich",
+    "frame-day": "Rahmen täglich",
+    "bar-span": "Balken Zeitspanne",
+    "frame-span": "Rahmen Zeitspanne",
+  };
+  const OLD_MODES = { bar: "bar-span", frame: "frame-span" }; // values saved by earlier versions
 
   const $ = (id) => document.getElementById(id);
 
@@ -160,10 +171,13 @@
   function guessMode(name) {
     const n = name.toLowerCase();
     if (/urlaub|abwesen|krank/.test(n)) return "initials";
-    if (/notdienst|\bnd\b/.test(n)) return "frame";
-    return "bar";
+    if (/notdienst|\bnd\b/.test(n)) return "frame-span";
+    return "bar-span";
   }
-  function modeOf(cal) { return settings.mode[cal.id] || guessMode(calName(cal)); }
+  function modeOf(cal) {
+    const m = settings.mode[cal.id];
+    return MODES[m] ? m : OLD_MODES[m] || guessMode(calName(cal));
+  }
 
   async function fetchEvents(cal, year) {
     const { start, end } = yearRange(year);
@@ -344,13 +358,16 @@
     const todayKey = ymd(new Date());
 
     const cals = enabledCalendars();
-    const byMode = { initials: [], bar: [], frame: [] };
+    const initials = [], barEvents = [];
     for (const c of cals) {
-      for (const ev of state.events[c.id + "|" + year] || []) byMode[modeOf(c)].push(Object.assign({ cal: c }, ev));
+      const mode = modeOf(c);
+      for (const ev of state.events[c.id + "|" + year] || []) {
+        (mode === "initials" ? initials : barEvents).push(Object.assign({ cal: c, mode }, ev));
+      }
     }
     // Day-indexed lookup for initials.
     const initialsByDay = {};
-    for (const ev of byMode.initials) {
+    for (const ev of initials) {
       for (let d = ev.first; d <= ev.last; d = addDays(d, 1)) (initialsByDay[ymd(d)] = initialsByDay[ymd(d)] || []).push(ev);
     }
 
@@ -362,19 +379,24 @@
       const weekEnd = days[6];
 
       // Bars in this week, in day units from Monday 0:00 (0) to next Monday 0:00 (7).
-      // Balken cover whole days; Rahmen are placed by their start and end time,
-      // so a night shift 18:00-08:00 runs from 3/4 of one day into the next.
-      const dayPos = (t) => Math.round((startOfDay(t) - wk) / 86400000) + (t.getHours() * 60 + t.getMinutes()) / 1440;
+      // "täglich" gives one piece per covered day; "Zeitspanne" one piece placed by the
+      // exact start and end time, so a night shift 18:00-08:00 runs from 3/4 of one day
+      // into the next.
+      const dayIdx = (d) => Math.round((startOfDay(d) - wk) / 86400000);
+      const dayPos = (t) => dayIdx(t) + (t.getHours() * 60 + t.getMinutes()) / 1440;
       const items = [];
-      for (const ev of byMode.bar) {
+      for (const ev of barEvents) {
         if (ev.last < wk || ev.first > weekEnd) continue;
-        items.push({ ev, a: Math.round((ev.first - wk) / 86400000), b: Math.round((ev.last - wk) / 86400000) + 1 });
-      }
-      for (const ev of byMode.frame) {
-        if (ev.last < wk || ev.first > weekEnd) continue;
-        const a = ev.timed ? dayPos(ev.start) : Math.round((ev.first - wk) / 86400000);
-        const b = ev.timed ? dayPos(ev.end) : Math.round((ev.last - wk) / 86400000) + 1;
-        if (b > 0 && a < 7) items.push({ ev, a, b: Math.max(b, a + 0.15), frame: true });
+        const frame = ev.mode.startsWith("frame");
+        if (ev.mode.endsWith("-day")) {
+          for (let i = Math.max(0, dayIdx(ev.first)); i <= Math.min(6, dayIdx(ev.last)); i++) {
+            items.push({ ev, a: i, b: i + 1, frame, daily: true });
+          }
+        } else {
+          const a = ev.timed ? dayPos(ev.start) : dayIdx(ev.first);
+          const b = ev.timed ? dayPos(ev.end) : dayIdx(ev.last) + 1;
+          if (b > 0 && a < 7) items.push({ ev, a, b: Math.max(b, a + 0.15), frame });
+        }
       }
       items.sort((x, y) => x.a - y.a || (y.b - y.a) - (x.b - x.a));
 
@@ -442,8 +464,11 @@
       });
       for (const b of bars) {
         const bar = el("div", "bar" + (b.frame ? " framebar" : "") + (b.contL ? " contL" : "") + (b.contR ? " contR" : ""), b.ev.title || calName(b.ev.cal));
-        // Leave a small gap at the ends of whole-day bars; framed bars sit exactly on their times.
-        const gapL = b.frame || b.contL ? 0 : 2, gapR = b.frame || b.contR ? 0 : 2;
+        // Daily pieces get a small gap on both sides so the days stay apart; spans sit
+        // exactly on their times, and whole-day bars get a gap only at their real ends.
+        const span = !b.daily;
+        const gapL = b.daily ? 2 : span && b.frame || b.contL ? 0 : 2;
+        const gapR = b.daily ? 2 : span && b.frame || b.contR ? 0 : 2;
         bar.style.left = "calc(" + (b.c0 / 7 * 100) + "% + " + gapL + "px)";
         bar.style.width = "calc(" + ((b.c1 - b.c0) / 7 * 100) + "% - " + (gapL + gapR) + "px)";
         if (b.frame) {
@@ -471,7 +496,7 @@
       const item = el("span", "lg");
       const sw = el("span", "swatch " + (cls || ""));
       if (color) {
-        if (mode === "frame") { sw.style.borderColor = color; sw.classList.add("framed"); }
+        if (mode.startsWith("frame")) { sw.style.borderColor = color; sw.classList.add("framed"); }
         else sw.style.background = color;
       }
       item.append(sw, " " + text);

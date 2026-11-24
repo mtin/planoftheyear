@@ -15,8 +15,8 @@ Für jede Sorte einen eigenen Kalender, zum Beispiel:
 | Urlaub Apotheke 1 | Ganztägiger Termin über den ganzen Urlaub, Titel nur das Kürzel, z. B. `Mi` | Kürzel im Tag |
 | Urlaub Apotheke 2 | genauso | Kürzel im Tag |
 | Urlaub Inhaber | genauso | Kürzel im Tag |
-| Notdienst | Termin mit Uhrzeit, z. B. 18:00 bis 08:00 am nächsten Tag, Titel z. B. `ND LöW Mi` (Apotheke + Kürzel) | Eingerahmter Balken, genau nach Uhrzeit vom einen in den nächsten Tag |
-| Events / Fortbildung | Termin mit kurzem Titel, z. B. `Pharmacon` | Farbiger Balken |
+| Notdienst | Termin mit Uhrzeit, z. B. 18:00 bis 08:00 am nächsten Tag, Titel z. B. `ND LöW Mi` (Apotheke + Kürzel) | Rahmen Zeitspanne: genau nach Uhrzeit vom einen in den nächsten Tag |
+| Events / Fortbildung | Termin mit kurzem Titel, z. B. `Pharmacon` | Balken Zeitspanne (oder „täglich“, wenn der Titel an jedem Tag stehen soll) |
 
 Tipps:
 - Die **Farbe des Kalenders** in Google ist die Farbe im Plan. Einzelne Termine können eine eigene Farbe bekommen.
@@ -38,8 +38,13 @@ Links erscheinen **alle** Google-Kalender, auch private, Geburtstage usw. Am Anf
 
 - Nur die Kalender für den Plan **anhaken** (z. B. Urlaub Apotheke 1, Urlaub Apotheke 2, Urlaub Inhaber, Notdienst, Events).
 - Alle anderen einfach nicht anhaken. Sie werden nicht angezeigt.
-- Rechts neben jedem Kalender steht, wie er angezeigt wird: **Kürzel**, **Balken** oder **Rahmen**.
-  Das wird nach dem Namen geraten („Urlaub“ → Kürzel, „Notdienst“ → Rahmen, sonst Balken) und kann hier geändert werden.
+- Rechts neben jedem Kalender steht, wie er angezeigt wird:
+  - **Kürzel**: Titel steht in jedem Tag (für Urlaub).
+  - **Balken täglich** / **Rahmen täglich**: ein Balken bzw. Rahmen pro Tag, der Titel steht an jedem Tag.
+  - **Balken Zeitspanne** / **Rahmen Zeitspanne**: ein durchgehender Balken bzw. Rahmen genau von Start- bis Endzeit
+    (z. B. Notdienst 18:00 bis 08:00 am nächsten Tag).
+  Das wird nach dem Namen geraten („Urlaub“ → Kürzel, „Notdienst“ → Rahmen Zeitspanne, sonst Balken Zeitspanne)
+  und kann hier geändert werden.
 
 Die Auswahl merkt sich der Browser. Auf einem anderen Gerät oder Browser muss man sie einmal neu anhaken.
 
