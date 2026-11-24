@@ -10,14 +10,17 @@
   const MONTHS = ["Jan", "Feb", "Mrz", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
   // Display modes per calendar.
   //  initials:   title written into every day (holiday initials)
-  //  bar-day / frame-day:   one bar / frame per day, title on every day
+  //  frame-day:  like initials, but each title in a small frame
+  //  bar-day:    one bar per day, title on every day
   //  bar-span / frame-span: one bar / frame from the exact start to the exact end time
+  //  list:       small "09:30 Title" lines under each other, for a busy private calendar
   const MODES = {
     "initials": "Kürzel",
-    "bar-day": "Balken täglich",
     "frame-day": "Rahmen täglich",
+    "bar-day": "Balken täglich",
     "bar-span": "Balken Zeitspanne",
     "frame-span": "Rahmen Zeitspanne",
+    "list": "Liste mit Uhrzeit",
   };
   const OLD_MODES = { bar: "bar-span", frame: "frame-span" }; // values saved by earlier versions
 
@@ -358,17 +361,26 @@
     const todayKey = ymd(new Date());
 
     const cals = enabledCalendars();
-    const initials = [], barEvents = [];
+    // Kürzel and Rahmen täglich go into the top line of each day, Liste below it,
+    // everything else into bar lanes.
+    const inlineByDay = {}, listByDay = {}, barEvents = [];
+    const addTo = (map, d, item) => (map[ymd(d)] = map[ymd(d)] || []).push(item);
     for (const c of cals) {
       const mode = modeOf(c);
-      for (const ev of state.events[c.id + "|" + year] || []) {
-        (mode === "initials" ? initials : barEvents).push(Object.assign({ cal: c, mode }, ev));
+      for (const raw of state.events[c.id + "|" + year] || []) {
+        const ev = Object.assign({ cal: c, mode }, raw);
+        if (mode === "initials" || mode === "frame-day") {
+          for (let d = ev.first; d <= ev.last; d = addDays(d, 1)) addTo(inlineByDay, d, ev);
+        } else if (mode === "list") {
+          for (let d = ev.first; d <= ev.last; d = addDays(d, 1)) addTo(listByDay, d, { ev, firstDay: d.getTime() === ev.first.getTime() });
+        } else {
+          barEvents.push(ev);
+        }
       }
     }
-    // Day-indexed lookup for initials.
-    const initialsByDay = {};
-    for (const ev of initials) {
-      for (let d = ev.first; d <= ev.last; d = addDays(d, 1)) (initialsByDay[ymd(d)] = initialsByDay[ymd(d)] || []).push(ev);
+    // Liste: all-day entries first, then by start time.
+    for (const k in listByDay) {
+      listByDay[k].sort((x, y) => (x.ev.timed - y.ev.timed) || (x.ev.start - y.ev.start));
     }
 
     const tbody = el("tbody", "yearblock");
@@ -439,13 +451,28 @@
 
         const ini = el("div", "initials");
         ini.style.gridColumn = col;
-        for (const ev of initialsByDay[k] || []) {
-          const s = el("span", null, ev.title);
+        for (const ev of inlineByDay[k] || []) {
+          const s = el("span", ev.mode === "frame-day" ? "chip" : null, ev.title);
           s.style.color = readable(ev.color);
+          if (ev.mode === "frame-day") s.style.borderColor = ev.color;
           s.title = calName(ev.cal) + ": " + ev.title;
           ini.append(s, " ");
         }
         grid.append(ini);
+
+        if (listByDay[k]) {
+          const list = el("div", "daylist");
+          list.style.gridColumn = col;
+          for (const { ev, firstDay } of listByDay[k]) {
+            const line = el("div", "li");
+            line.style.borderLeftColor = ev.color;
+            if (ev.timed && firstDay) line.append(el("span", "t", hhmm(ev.start)), " ");
+            line.append(ev.title || "(ohne Titel)");
+            line.title = calName(ev.cal) + ": " + ev.title + (ev.timed ? " (" + hhmm(ev.start) + "–" + hhmm(ev.end) + ")" : "");
+            list.append(line);
+          }
+          grid.append(list);
+        }
 
         const foot = el("div", "foot");
         foot.style.gridColumn = col;
@@ -458,7 +485,7 @@
 
       const laneEls = lanes.map((_, i) => {
         const ln = el("div", "lane");
-        ln.style.gridRow = String(i + 2);
+        ln.style.gridRow = String(i + 3); // after the initials and list rows
         grid.append(ln);
         return ln;
       });

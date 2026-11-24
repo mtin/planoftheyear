@@ -40,9 +40,12 @@ Links erscheinen **alle** Google-Kalender, auch private, Geburtstage usw. Am Anf
 - Alle anderen einfach nicht anhaken. Sie werden nicht angezeigt.
 - Rechts neben jedem Kalender steht, wie er angezeigt wird:
   - **Kürzel**: Titel steht in jedem Tag (für Urlaub).
-  - **Balken täglich** / **Rahmen täglich**: ein Balken bzw. Rahmen pro Tag, der Titel steht an jedem Tag.
+  - **Rahmen täglich**: wie Kürzel, nur mit kleinem farbigen Rahmen um den Titel.
+  - **Balken täglich**: ein Balken pro Tag, der Titel steht an jedem Tag.
   - **Balken Zeitspanne** / **Rahmen Zeitspanne**: ein durchgehender Balken bzw. Rahmen genau von Start- bis Endzeit
     (z. B. Notdienst 18:00 bis 08:00 am nächsten Tag).
+  - **Liste mit Uhrzeit**: alle Termine des Tages klein untereinander mit Uhrzeit, wie in Google.
+    Gedacht für den privaten Kalender; zum Lesen reinzoomen (Strg/Cmd + oder zwei Finger).
   Das wird nach dem Namen geraten („Urlaub“ → Kürzel, „Notdienst“ → Rahmen Zeitspanne, sonst Balken Zeitspanne)
   und kann hier geändert werden.
 
