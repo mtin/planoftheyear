@@ -22,7 +22,8 @@ The page URL will be: **https://mtin.github.io/planoftheyear/**
 
 ## 2. Create the Google Cloud project
 
-Do this while signed in with **the owner's Google account** (the one with the calendars).
+Any Google account can own the Cloud project (yours is fine). Only the **test user** in step 4
+must be the owner's Gmail, because he is the one who signs in.
 
 1. Go to <https://console.cloud.google.com/>.
 2. Top bar: project picker → **New project**. Name it e.g. `Apotheke Jahresplan` → **Create**.
@@ -36,9 +37,9 @@ Do this while signed in with **the owner's Google account** (the one with the ca
 ## 4. Set up the consent screen ("Google Auth Platform")
 
 1. Go to <https://console.cloud.google.com/auth/overview> and click **Get started**.
-2. **App information**: App name `Apotheke Jahresplan`, user support email = the owner's email. **Next**.
+2. **App information**: App name `Apotheke Jahresplan`, user support email = your email (shown on the sign-in screen as contact). **Next**.
 3. **Audience**: choose **External**. **Next**.
-4. **Contact information**: the owner's email. **Next**.
+4. **Contact information**: your email (Google sends project notices there). **Next**.
 5. Accept the policy → **Create**.
 6. Open **Audience** (left menu). Leave the publishing status on **Testing**.
    Under **Test users** click **Add users** and add the owner's Gmail address. **Save**.
