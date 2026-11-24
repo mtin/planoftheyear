@@ -183,27 +183,28 @@
     return items.filter((e) => e.status !== "cancelled").map((e) => normalize(e, cal));
   }
 
-  // Turn a Google event into { title, color, first, last } with local Date objects (inclusive).
+  // Turn a Google event into { title, color, first, last, start, end }.
+  // first/last are the covered days (inclusive), start/end the exact times (end exclusive).
   function normalize(e, cal) {
-    let first, last;
+    let start, end;
     if (e.start.date) {
-      first = parseYmd(e.start.date);
-      last = addDays(parseYmd(e.end.date), -1);
+      start = parseYmd(e.start.date);
+      end = parseYmd(e.end.date);
     } else {
-      // For framed calendars (night shifts) a shift ending the next morning belongs only to the
-      // day it starts, so ignore the last 12 hours; otherwise ignore just the final millisecond.
-      const trim = modeOf(cal) === "frame" ? 12 * 3600000 : 1;
-      const s = new Date(e.start.dateTime), en = new Date(new Date(e.end.dateTime).getTime() - trim);
-      first = new Date(s.getFullYear(), s.getMonth(), s.getDate());
-      last = new Date(en.getFullYear(), en.getMonth(), en.getDate());
-      if (last < first) last = first;
+      start = new Date(e.start.dateTime);
+      end = new Date(e.end.dateTime);
     }
+    const lastMoment = new Date(Math.max(start.getTime(), end.getTime() - 1));
     return {
       title: (e.summary || "").trim(),
       color: (e.colorId && state.eventColors[e.colorId]) || cal.backgroundColor,
-      first, last,
+      first: startOfDay(start), last: startOfDay(lastMoment),
+      start, end, timed: !e.start.date,
     };
   }
+
+  function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function hhmm(d) { return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
 
   // Fetch whatever is missing for the given years, then redraw them.
   async function loadEvents(years = state.years) {
@@ -347,14 +348,10 @@
     for (const c of cals) {
       for (const ev of state.events[c.id + "|" + year] || []) byMode[modeOf(c)].push(Object.assign({ cal: c }, ev));
     }
-    byMode.bar.sort((a, b) => a.first - b.first || (b.last - b.first) - (a.last - a.first));
-
-    // Day-indexed lookups for initials and frames.
-    const initialsByDay = {}, framesByDay = {};
-    for (const [list, target] of [[byMode.initials, initialsByDay], [byMode.frame, framesByDay]]) {
-      for (const ev of list) {
-        for (let d = ev.first; d <= ev.last; d = addDays(d, 1)) (target[ymd(d)] = target[ymd(d)] || []).push(ev);
-      }
+    // Day-indexed lookup for initials.
+    const initialsByDay = {};
+    for (const ev of byMode.initials) {
+      for (let d = ev.first; d <= ev.last; d = addDays(d, 1)) (initialsByDay[ymd(d)] = initialsByDay[ymd(d)] || []).push(ev);
     }
 
     const tbody = el("tbody", "yearblock");
@@ -364,17 +361,32 @@
       const days = [...Array(7)].map((_, i) => addDays(wk, i));
       const weekEnd = days[6];
 
-      // Bars in this week, assigned to lanes so they don't overlap.
-      const lanes = [];
-      const bars = [];
+      // Bars in this week, in day units from Monday 0:00 (0) to next Monday 0:00 (7).
+      // Balken cover whole days; Rahmen are placed by their start and end time,
+      // so a night shift 18:00-08:00 runs from 3/4 of one day into the next.
+      const dayPos = (t) => Math.round((startOfDay(t) - wk) / 86400000) + (t.getHours() * 60 + t.getMinutes()) / 1440;
+      const items = [];
       for (const ev of byMode.bar) {
         if (ev.last < wk || ev.first > weekEnd) continue;
-        const c0 = Math.max(0, Math.round((ev.first - wk) / 86400000));
-        const c1 = Math.min(6, Math.round((ev.last - wk) / 86400000));
-        let lane = lanes.findIndex((usedTo) => usedTo < c0);
-        if (lane === -1) { lane = lanes.length; lanes.push(-1); }
+        items.push({ ev, a: Math.round((ev.first - wk) / 86400000), b: Math.round((ev.last - wk) / 86400000) + 1 });
+      }
+      for (const ev of byMode.frame) {
+        if (ev.last < wk || ev.first > weekEnd) continue;
+        const a = ev.timed ? dayPos(ev.start) : Math.round((ev.first - wk) / 86400000);
+        const b = ev.timed ? dayPos(ev.end) : Math.round((ev.last - wk) / 86400000) + 1;
+        if (b > 0 && a < 7) items.push({ ev, a, b: Math.max(b, a + 0.15), frame: true });
+      }
+      items.sort((x, y) => x.a - y.a || (y.b - y.a) - (x.b - x.a));
+
+      // Assign lanes so bars don't overlap.
+      const lanes = [];
+      const bars = [];
+      for (const it of items) {
+        const c0 = Math.max(0, it.a), c1 = Math.min(7, it.b);
+        let lane = lanes.findIndex((usedTo) => usedTo <= c0 + 1e-6);
+        if (lane === -1) { lane = lanes.length; lanes.push(0); }
         lanes[lane] = c1;
-        bars.push({ ev, c0, c1, lane, cont: ev.first < wk });
+        bars.push(Object.assign(it, { c0, c1, lane, contL: it.a < 0, contR: it.b > 7 }));
       }
 
       const tr = el("tr", "week");
@@ -416,27 +428,33 @@
         const foot = el("div", "foot");
         foot.style.gridColumn = col;
         if (pub[k]) foot.append(el("span", "hname", pub[k]));
-        for (const ev of framesByDay[k] || []) {
-          const f = el("span", "frame", ev.title || calName(ev.cal));
-          f.style.borderColor = ev.color;
-          f.style.color = readable(ev.color);
-          f.title = calName(ev.cal) + ": " + (ev.title || "");
-          foot.append(f);
-        }
         const dn = el("span", "dnum", d.getDate() + "." + (d.getMonth() + 1));
         if (d.getDate() === 1) dn.classList.add("dfirst");
         foot.append(dn);
         grid.append(foot);
       });
 
+      const laneEls = lanes.map((_, i) => {
+        const ln = el("div", "lane");
+        ln.style.gridRow = String(i + 2);
+        grid.append(ln);
+        return ln;
+      });
       for (const b of bars) {
-        const bar = el("div", "bar" + (b.cont ? " cont" : ""), b.ev.title);
-        bar.style.gridColumn = (b.c0 + 1) + " / " + (b.c1 + 2);
-        bar.style.gridRow = String(b.lane + 2);
-        bar.style.background = b.ev.color;
-        bar.style.color = textOn(b.ev.color);
-        bar.title = calName(b.ev.cal) + ": " + b.ev.title;
-        grid.append(bar);
+        const bar = el("div", "bar" + (b.frame ? " framebar" : "") + (b.contL ? " contL" : "") + (b.contR ? " contR" : ""), b.ev.title || calName(b.ev.cal));
+        // Leave a small gap at the ends of whole-day bars; framed bars sit exactly on their times.
+        const gapL = b.frame || b.contL ? 0 : 2, gapR = b.frame || b.contR ? 0 : 2;
+        bar.style.left = "calc(" + (b.c0 / 7 * 100) + "% + " + gapL + "px)";
+        bar.style.width = "calc(" + ((b.c1 - b.c0) / 7 * 100) + "% - " + (gapL + gapR) + "px)";
+        if (b.frame) {
+          bar.style.borderColor = b.ev.color;
+          bar.style.color = readable(b.ev.color);
+        } else {
+          bar.style.background = b.ev.color;
+          bar.style.color = textOn(b.ev.color);
+        }
+        bar.title = calName(b.ev.cal) + ": " + b.ev.title + (b.ev.timed ? " (" + hhmm(b.ev.start) + "–" + hhmm(b.ev.end) + ")" : "");
+        laneEls[b.lane].append(bar);
       }
 
       td.append(grid);

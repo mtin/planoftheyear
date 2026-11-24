@@ -92,7 +92,7 @@ The calendar colour in Google is the colour in the year view.
 | `Urlaub Apotheke 1` | All-day event, title = initials only, e.g. `Mi` or `Mi Kr`, spanning the whole holiday | Initials in each day |
 | `Urlaub Apotheke 2` | same | Initials in each day |
 | `Urlaub Inhaber` | same | Initials in each day |
-| `Notdienst` (or one per pharmacy) | One event on the day, title e.g. `ND LöW` / `ND AIG` | Framed label at the date |
+| `Notdienst` (or one per pharmacy) | Timed event, e.g. 18:00 to 08:00 next day, title e.g. `ND LöW Mi` | Framed bar placed by time, running into the next day |
 | `Events` / `Fortbildung` | Any event, title = what it is | Coloured bar across the days |
 
 The page guesses the display style from the calendar name (contains "Urlaub" → initials,

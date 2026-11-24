@@ -15,7 +15,7 @@ Für jede Sorte einen eigenen Kalender, zum Beispiel:
 | Urlaub Apotheke 1 | Ganztägiger Termin über den ganzen Urlaub, Titel nur das Kürzel, z. B. `Mi` | Kürzel im Tag |
 | Urlaub Apotheke 2 | genauso | Kürzel im Tag |
 | Urlaub Inhaber | genauso | Kürzel im Tag |
-| Notdienst | Ein Termin am Tag des Notdienstes, Titel z. B. `ND LöW` oder `ND AIG` | Eingerahmtes Schild am Datum |
+| Notdienst | Termin mit Uhrzeit, z. B. 18:00 bis 08:00 am nächsten Tag, Titel z. B. `ND LöW Mi` (Apotheke + Kürzel) | Eingerahmter Balken, genau nach Uhrzeit vom einen in den nächsten Tag |
 | Events / Fortbildung | Termin mit kurzem Titel, z. B. `Pharmacon` | Farbiger Balken |
 
 Tipps:
