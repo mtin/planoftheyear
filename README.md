@@ -11,7 +11,7 @@ One row per week (Monday to Sunday), like the hand-made yearly PDF.
 - Brandenburg public holidays and school holidays are built in (`holidays.js`).
 - **Drucken / PDF** prints the year on three A4 pages.
 
-Setup: see [SETUP.md](SETUP.md).
+Setup: see [SETUP.md](SETUP.md). User guide (German): [ANLEITUNG.md](ANLEITUNG.md).
 
 ## Files
 

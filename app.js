@@ -84,8 +84,9 @@
     } catch (e) { /* ignore */ }
   }
 
-  window.onGisLoaded = function () {
-    if (!cfgClientId()) return;
+  // Called by the Google Identity Services library once it has loaded.
+  window.onGoogleLibraryLoad = function () {
+    if (!cfgClientId() || tokenClient) return;
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: cfgClientId(),
       scope: SCOPE,
