@@ -96,7 +96,7 @@ main { flex: 1; min-width: 0; padding: 8px 16px 32px; }
 .week .dgrid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: minmax(18px, auto) repeat(var(--lanes, 1), minmax(15px, auto)) auto;
+  grid-template-rows: minmax(18px, auto) auto repeat(var(--lanes, 1), minmax(15px, auto)) auto;
   min-height: 62px;
 }
 .bg { grid-row: 1 / -1; border-left: 1px dashed #b9bdc4; background: #fff; }
@@ -113,6 +113,18 @@ main { flex: 1; min-width: 0; padding: 8px 16px 32px; }
   font-weight: 600; font-size: 12px; line-height: 1.25;
   overflow-wrap: anywhere;
 }
+
+.initials .chip { display: inline-block; border: 1.5px solid; border-radius: 3px; padding: 0 2px; line-height: 1.15; background: #fff; }
+
+/* Liste mit Uhrzeit: tiny lines, readable when zoomed in */
+.daylist { grid-row: 2; z-index: 1; padding: 0 2px 1px; min-width: 0; }
+.daylist .li {
+  font-size: 7px; line-height: 1.2;
+  border-left: 2px solid; padding-left: 2px; margin-bottom: 1px;
+  overflow-wrap: anywhere; /* full text, so zooming in shows everything */
+  color: var(--ink); background: rgba(255,255,255,.6);
+}
+.daylist .t { font-weight: 700; }
 
 .lane { grid-column: 1 / -1; position: relative; z-index: 2; min-height: 15px; }
 .bar {
@@ -167,7 +179,7 @@ main { flex: 1; min-width: 0; padding: 8px 16px 32px; }
   .year col.c-month { width: 9mm; }
   .year col.c-kw { width: 7mm; }
   .week { break-inside: avoid; page-break-inside: avoid; }
-  .week .dgrid { min-height: 13.6mm; grid-template-rows: minmax(11px, auto) repeat(var(--lanes, 1), minmax(10px, auto)) auto; }
+  .week .dgrid { min-height: 13.6mm; grid-template-rows: minmax(11px, auto) auto repeat(var(--lanes, 1), minmax(10px, auto)) auto; }
   .week .kw { font-size: 12px; }
   .week .month { font-size: 10px; }
   .initials { font-size: 9px; }
