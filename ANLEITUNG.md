@@ -45,9 +45,9 @@ Die Auswahl merkt sich der Browser. Auf einem anderen Gerät oder Browser muss m
 
 ## 4. Benutzen
 
-- **‹ 2026 ›** oben: Jahr wechseln.
+- Einfach nach unten scrollen: das nächste Jahr wird automatisch angehängt. **‹ 2026 ›** oben springt zum vorigen/nächsten Jahr.
 - Mit der Maus über einem Eintrag: zeigt, aus welchem Kalender er kommt.
-- **Drucken / PDF**: druckt das Jahr auf 3 A4-Seiten. Im Druckdialog „Hintergrundgrafiken“ einschalten,
+- **Drucken / PDF**: druckt das Jahr, das gerade oben angezeigt wird, auf 3 A4-Seiten. Im Druckdialog „Hintergrundgrafiken“ einschalten,
   falls die Farben fehlen. „Als PDF sichern“ ergibt eine PDF-Datei.
 - **Abmelden**: oben rechts.
 
