@@ -85,6 +85,9 @@ main { flex: 1; min-width: 0; padding: 8px 16px 32px; }
 .year .yearhead { font-size: 15px; }
 .days-head .dgrid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
 
+.yearblock tr:first-child > * { border-top: 3px solid #555; }
+.week .month.yearlabel { font-size: 15px; }
+.more { padding: 24px; text-align: center; color: var(--muted); }
 .week th { vertical-align: top; padding: 2px 2px 0; }
 .week .month { text-align: left; font-weight: 700; font-size: 13px; }
 .week .kw { background: #d9dce1; font-size: 16px; font-weight: 600; color: #444; vertical-align: middle; }
@@ -101,7 +104,6 @@ main { flex: 1; min-width: 0; padding: 8px 16px 32px; }
 .bg.weekend { background: var(--weekend); }
 .bg.school { background: var(--school); }
 .bg.holiday { background: var(--holiday); }
-.bg.outside { opacity: .55; }
 .bg.first { border-left: 2px solid #555; }
 .bg.today { box-shadow: inset 0 0 0 2px var(--today); }
 
@@ -155,7 +157,7 @@ main { flex: 1; min-width: 0; padding: 8px 16px 32px; }
 @media print {
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { font-size: 9px; }
-  .topbar, .sidebar { display: none; }
+  .topbar, .sidebar, .more, .noprint { display: none; }
   .layout { display: block; }
   main { padding: 0; }
   .legend { font-size: 8px; margin-bottom: 3px; }

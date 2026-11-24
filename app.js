@@ -27,7 +27,8 @@
 
   const settings = loadSettings();
   const state = {
-    year: new Date().getFullYear(),
+    year: new Date().getFullYear(), // year currently in view
+    years: [],            // years rendered so far (sorted)
     token: null,
     calendars: [],        // from calendarList
     eventColors: {},      // colorId -> hex
@@ -48,10 +49,10 @@
     const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
     return Math.ceil(((t - y0) / 86400000 + 1) / 7);
   }
+  // A year block is its ISO calendar weeks (KW 1 to KW 52/53), so blocks follow each other
+  // without gaps or overlaps. KW 1 always contains 4 January.
   function yearRange(year) {
-    const start = mondayOnOrBefore(new Date(year, 0, 1));
-    const end = addDays(mondayOnOrBefore(new Date(year, 11, 31)), 7); // exclusive
-    return { start, end };
+    return { start: mondayOnOrBefore(new Date(year, 0, 4)), end: mondayOnOrBefore(new Date(year + 1, 0, 4)) };
   }
 
   // ---------- colours ----------
@@ -202,20 +203,22 @@
     };
   }
 
-  async function loadEvents() {
-    if (!state.token) { render(); return; }
+  // Fetch whatever is missing for the given years, then redraw them.
+  async function loadEvents(years = state.years) {
+    if (!state.token) { render(years); return; }
     const wanted = state.calendars.filter((c) => settings.enabled[c.id]);
-    const missing = wanted.filter((c) => !state.events[c.id + "|" + state.year]);
+    const jobs = [];
+    for (const y of years) for (const c of wanted) if (!state.events[c.id + "|" + y]) jobs.push([c, y]);
     try {
-      if (missing.length) setStatus("Lade Termine …");
-      await Promise.all(missing.map(async (c) => {
-        state.events[c.id + "|" + state.year] = await fetchEvents(c, state.year);
+      if (jobs.length) setStatus("Lade Termine …");
+      await Promise.all(jobs.map(async ([c, y]) => {
+        state.events[c.id + "|" + y] = await fetchEvents(c, y);
       }));
       setStatus("");
     } catch (e) {
       setStatus(e.message);
     }
-    render();
+    render(years);
   }
 
   // ---------- sidebar ----------
@@ -265,18 +268,79 @@
     return e;
   }
 
-  function render() {
-    const year = state.year;
+  // Redraw the given year blocks, keeping the week at the top of the screen in place.
+  function render(years = state.years) {
+    const anchor = topVisibleWeek();
+    const anchorTop = anchor && anchor.getBoundingClientRect().top;
+    const table = $("year");
+    for (const y of years) {
+      const fresh = renderYear(y);
+      const old = table.querySelector('tbody[data-year="' + y + '"]');
+      if (old) old.replaceWith(fresh);
+      else {
+        const next = [...table.tBodies].find((b) => +b.dataset.year > y);
+        table.insertBefore(fresh, next || null);
+      }
+    }
+    if (anchor) {
+      const now = table.querySelector('tr[data-week="' + anchor.dataset.week + '"]');
+      if (now) window.scrollBy(0, now.getBoundingClientRect().top - anchorTop);
+    }
+    renderLegend(enabledCalendars());
+    updateYearInView();
+  }
+
+  function enabledCalendars() {
+    return state.token ? state.calendars.filter((c) => settings.enabled[c.id]) : [];
+  }
+
+  function headerBottom() {
+    return $("yearHead").getBoundingClientRect().bottom; // the sticky cell, not the row
+  }
+
+  function topVisibleWeek() {
+    const line = headerBottom() + 4; // small tolerance for rounding
+    for (const tr of document.querySelectorAll("tr.week")) {
+      if (tr.getBoundingClientRect().bottom > line) return tr;
+    }
+    return null;
+  }
+
+  function updateYearInView() {
+    const tr = topVisibleWeek();
+    const year = tr ? +tr.parentElement.dataset.year : state.years[0];
+    if (!year) return;
+    state.year = year;
     $("yearLabel").textContent = year;
     $("yearHead").textContent = year;
     document.title = "Jahresplan " + year;
+  }
 
+  // Make sure a year block exists (and every year between it and the rendered ones).
+  function ensureYear(y) {
+    if (state.years.includes(y)) return;
+    const add = [];
+    if (!state.years.length) add.push(y);
+    for (let i = state.years[0] - 1; i >= y; i--) add.push(i);
+    for (let i = state.years[state.years.length - 1] + 1; i <= y; i++) add.push(i);
+    state.years = state.years.concat(add).sort((a, b) => a - b);
+    render(add);
+    loadEvents(add);
+  }
+
+  function scrollToYear(y) {
+    ensureYear(y);
+    const tb = $("year").querySelector('tbody[data-year="' + y + '"]');
+    window.scrollBy(0, tb.getBoundingClientRect().top - headerBottom());
+  }
+
+  function renderYear(year) {
     const { start, end } = yearRange(year);
     const pub = settings.holidays ? Object.assign({}, Holidays.publicHolidays(year - 1), Holidays.publicHolidays(year), Holidays.publicHolidays(year + 1)) : {};
     const school = settings.school ? Holidays.schoolHolidays(year) : {};
     const todayKey = ymd(new Date());
 
-    const cals = state.token ? state.calendars.filter((c) => settings.enabled[c.id]) : [];
+    const cals = enabledCalendars();
     const byMode = { initials: [], bar: [], frame: [] };
     for (const c of cals) {
       for (const ev of state.events[c.id + "|" + year] || []) byMode[modeOf(c)].push(Object.assign({ cal: c }, ev));
@@ -291,8 +355,8 @@
       }
     }
 
-    const tbody = $("weeks");
-    tbody.innerHTML = "";
+    const tbody = el("tbody", "yearblock");
+    tbody.dataset.year = year;
 
     for (let wk = start; wk < end; wk = addDays(wk, 7)) {
       const days = [...Array(7)].map((_, i) => addDays(wk, i));
@@ -312,8 +376,11 @@
       }
 
       const tr = el("tr", "week");
+      tr.dataset.week = ymd(wk);
       const firstOfMonth = days.find((d) => d.getDate() === 1);
-      const monthCell = el("th", "month", firstOfMonth ? (firstOfMonth.getMonth() === 0 ? String(firstOfMonth.getFullYear()) : MONTHS[firstOfMonth.getMonth()]) : "");
+      // The first row of a year block names the year, later rows name a month starting in that week.
+      const label = wk.getTime() === start.getTime() ? String(year) : firstOfMonth ? MONTHS[firstOfMonth.getMonth()] : "";
+      const monthCell = el("th", "month" + (wk.getTime() === start.getTime() ? " yearlabel" : ""), label);
       tr.append(monthCell, el("th", "kw", String(isoWeek(wk))));
 
       const td = el("td", "days");
@@ -329,7 +396,6 @@
         if (i >= 5) bg.classList.add("weekend");
         if (school[k]) bg.classList.add("school");
         if (pub[k]) bg.classList.add("holiday");
-        if (d.getFullYear() !== year) bg.classList.add("outside");
         if (k === todayKey) bg.classList.add("today");
         if (d.getDate() === 1) bg.classList.add("first");
         bg.title = [pub[k], school[k]].filter(Boolean).join(" · ");
@@ -375,8 +441,7 @@
       tr.append(td);
       tbody.append(tr);
     }
-
-    renderLegend(cals);
+    return tbody;
   }
 
   function renderLegend(cals) {
@@ -409,13 +474,37 @@
     $("showHolidays").addEventListener("change", (e) => { settings.holidays = e.target.checked; saveSettings(); render(); });
     $("showSchool").addEventListener("change", (e) => { settings.school = e.target.checked; saveSettings(); render(); });
 
-    $("prevYear").addEventListener("click", () => { state.year--; loadEvents(); });
-    $("nextYear").addEventListener("click", () => { state.year++; loadEvents(); });
+    $("prevYear").addEventListener("click", () => scrollToYear(state.year - 1));
+    $("nextYear").addEventListener("click", () => scrollToYear(state.year + 1));
     $("signIn").addEventListener("click", signIn);
     $("signOut").addEventListener("click", signOut);
     $("print").addEventListener("click", () => window.print());
 
-    render();
+    // Print only the year in view.
+    window.addEventListener("beforeprint", () => {
+      for (const b of $("year").tBodies) b.classList.toggle("noprint", +b.dataset.year !== state.year);
+    });
+    window.addEventListener("afterprint", () => {
+      for (const b of $("year").tBodies) b.classList.remove("noprint");
+    });
+
+    // Endless scroll: add the next year when the end of the page comes close.
+    const more = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      ensureYear(state.years[state.years.length - 1] + 1);
+      more.unobserve($("more")); // re-observe so it fires again if still close
+      more.observe($("more"));
+    }, { rootMargin: "1500px 0px" });
+
+    let ticking = false;
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { ticking = false; updateYearInView(); });
+    }, { passive: true });
+
+    ensureYear(new Date().getFullYear());
+    more.observe($("more"));
     if (state.token) afterSignIn();
   }
 
