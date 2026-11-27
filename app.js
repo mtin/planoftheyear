@@ -333,7 +333,7 @@
     state.year = year;
     $("yearLabel").textContent = year;
     $("yearHead").textContent = year;
-    document.title = "Hallo Lukas " + year;
+    document.title = "Jahresplan " + year;
   }
 
   // Make sure a year block exists (and every year between it and the rendered ones).
